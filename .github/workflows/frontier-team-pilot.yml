@@ -1,0 +1,22 @@
+name: Frontier team pilot checks
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/cli/thread.ts'
+      - 'scripts/frontier-team-*'
+      - '.agents/skills/frontier-team/**'
+      - 'docs/experiments/frontier-team-proof.md'
+      - '.github/workflows/frontier-team-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-mock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell syntax and mock T3 launcher
+        run: bash scripts/frontier-team-proof.test.sh
