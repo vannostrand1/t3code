@@ -7,6 +7,7 @@ import {
   ProjectId,
   RunId,
   ThreadId,
+  RuntimeMode,
   TrimmedNonEmptyString,
   type OrchestratorMcpThreadListItem,
   type OrchestratorMcpThreadStatus,
@@ -551,6 +552,12 @@ const threadStartCommand = Command.make("start", {
     Flag.withDescription("Model slug. Defaults to the project's default model."),
     Flag.optional,
   ),
+  permission: Flag.String("permission").pipe(
+    Flag.withDescription(
+      "Runtime permission mode: approval-required (Supervised), auto-accept-edits, auto, or full-access.",
+    ),
+    Flag.optional,
+  ),
   worktree: Flag.String("worktree").pipe(
     Flag.withDescription(
       "Run in a new git worktree based on this branch, tag, or commit, instead of the project folder.",
@@ -572,6 +579,14 @@ const threadStartCommand = Command.make("start", {
       if (Option.isSome(flags.provider) !== Option.isSome(flags.model)) {
         return yield* new ThreadUsageError({ detail: "--provider and --model go together." });
       }
+      const requestedPermission = Option.isSome(flags.permission)
+        ? flags.permission.value
+        : undefined;
+      if (requestedPermission !== undefined && !Schema.is(RuntimeMode)(requestedPermission)) {
+        return yield* new ThreadUsageError({
+          detail: "--permission must be approval-required, auto-accept-edits, auto, or full-access.",
+        });
+      }
       const title = yield* decodeTitle(
         Option.getOrElse(flags.title, () => titleFromMessage(message)),
       ).pipe(Effect.mapError(() => new ThreadUsageError({ detail: "The title is empty." })));
@@ -585,6 +600,7 @@ const threadStartCommand = Command.make("start", {
               projectId: project.id,
               title,
               message,
+              ...(requestedPermission === undefined ? {} : { runtimeMode: requestedPermission }),
               ...(workspaceStrategy === undefined ? {} : { workspaceStrategy }),
               ...(Option.isSome(flags.provider) && Option.isSome(flags.model)
                 ? {
