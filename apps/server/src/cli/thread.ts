@@ -566,6 +566,28 @@ const threadListCommand = Command.make("list", {
   ),
 );
 
+const threadActivityCommand = Command.make("activity", {
+  ...projectLocationFlags,
+  thread: threadArgument,
+  json: jsonFlag,
+}).pipe(
+  Command.withDescription("Read recorded activity for a T3 thread."),
+  Command.withHandler((flags) =>
+    Effect.gen(function* () {
+      const threadId = yield* decodeThreadId(flags.thread);
+      yield* withThreadTools(
+        flags,
+        Effect.fn("cli.thread.activity")(function* (tools) {
+          const { thread, items } = yield* readTimeline(tools, threadId, "activity");
+          if (flags.json) return yield* printJson({ thread, items });
+          yield* Console.log(`${thread.title}: ${items.length} items`);
+          for (const item of items) yield* Console.log(item.type);
+        }),
+      );
+    }).pipe(reportThreadErrors),
+  ),
+);
+
 const threadStartCommand = Command.make("start", {
   ...projectLocationFlags,
   project: Argument.String("project").pipe(
@@ -753,6 +775,7 @@ export const threadCommand = Command.make("thread").pipe(
   Command.withSubcommands([
     threadCapabilitiesCommand,
     threadListCommand,
+    threadActivityCommand,
     threadStartCommand,
     threadSendCommand,
     threadShowCommand,
