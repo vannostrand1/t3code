@@ -11,6 +11,10 @@ cli() { node apps/server/src/bin.ts "$@"; }
 caps() { cli thread capabilities --base-dir "$STATE" --json > "$REPORT/capabilities.json" 2>"$REPORT/error.txt"; }
 
 if ! caps; then
+  if ps -axo command | grep -F "dev-runner.ts dev --home-dir $STATE" | grep -v grep >/dev/null; then
+    echo "Existing T3 dev runner is present but unavailable; see $REPORT/error.txt"
+    exit 2
+  fi
   echo "Starting isolated T3 developer server."
   nohup env T3CODE_DEV_SEED=0 vp run dev --home-dir "$STATE" > "$REPORT/dev.log" 2>&1 < /dev/null &
   ready=0
