@@ -36,9 +36,19 @@ cd "$HOME/Developer/t3code"
 bash scripts/frontier-team-preflight.sh
 ```
 
-The preflight only checks local commands and never installs anything. `t3` must be installed and its server must be running before a real experiment; binaries or sign-ins alone do not prove a live T3 environment.
+The preflight only checks local commands and never installs anything. An installed binary or an authenticated account does not prove a running T3 environment.
 
-For a source development build, T3's official instructions use `vp i` and `vp run dev` and isolate `.t3` development state. Read `docs/operations/development.md` before choosing this route. An official packaged CLI instead uses `t3` to launch the server. **Do not run a dev server against the live `~/.t3/userdata`.**
+**The pilot deliberately requires the personal fork's revised CLI**, which adds `--permission approval-required` to `t3 thread start`. An older packaged `t3` command will refuse the pilot **before launching either model** rather than silently using the unsafe Full access default.
+
+For a source development build, read `docs/operations/development.md` and follow the documented `vp i` / `vp run dev` workflow, with development state isolated under `.t3`. For the safe first evaluation, launch the dev server in one terminal with `T3CODE_DEV_SEED=0 vp run dev`, then use the *fork source CLI* from another terminal:
+
+```bash
+cd "$HOME/Developer/t3code"
+export T3_CLI_JS="$PWD/apps/server/src/bin.ts"
+export T3_BASE_DIR="$PWD/.t3"
+```
+
+Node must be the project's version (the `vp` toolchain manages it). No separate Homebrew T3 installer or production `t3` binary is required for this development-path pilot. **Do not run a dev server against the live `~/.t3/userdata`.**
 
 ## Phase 2: run the bounded two-model test
 
@@ -51,7 +61,7 @@ bash scripts/frontier-team-proof.sh --run \
   "ACTUAL_CODEX_PROVIDER_INSTANCE_ID" "ACTUAL_CODEX_MODEL_SLUG"
 ```
 
-**Do not paste the placeholders as though they were real IDs.** If the provider is missing, first connect that provider through T3.
+**Do not paste the placeholders as though they were real IDs.** If the provider is missing, first connect that provider through T3. The script checks that the CLI advertises `--permission` and passes `approval-required` for both threads; this is T3's internal value for the **Supervised** setting. It refuses an older CLI rather than starting Full access threads.
 
 The harness:
 - creates a new Claude thread via `t3 thread start --provider ... --model ... --json`;
@@ -92,7 +102,8 @@ The desired multi-column Round Table with the owner's column, individual AI lane
 ## Failure modes to expect
 
 - **T3 cloned but CLI not installed:** source checkout is not executable service. Do not claim installed.
-- **No `t3` command:** the pilot script stops without changing anything.
+- **No `t3` command:** use `T3_CLI_JS` plus `T3_BASE_DIR` with the source development server, or install a fork-built CLI. The pilot stops without launching threads if neither is available.
+- **Old CLI without `--permission`:** the pilot fails before creating any thread to avoid Full access defaults.
 - **Provider auth incomplete:** T3's start call returns an error, not a substitute model.
 - **Two provider IDs identical:** the pilot script refuses to run.
 - **MCP tool absent from provider:** the model may not have inherited the native T3 tools. Check the launched provider and T3 environment. Do not substitute Terminal scripts and call it agent-to-agent.
