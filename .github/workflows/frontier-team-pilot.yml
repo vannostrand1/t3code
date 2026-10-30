@@ -19,4 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Shell syntax and mock T3 launcher
-        run: bash scripts/frontier-team-proof.test.sh
+        run: |
+          bash scripts/frontier-team-proof.test.sh
+          bash -n scripts/frontier-team-finish.sh
+          python3 -m py_compile scripts/frontier-team-select.py scripts/frontier-team-verify.py
