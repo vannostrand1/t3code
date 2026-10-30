@@ -14,7 +14,7 @@ def received(items, sender):
     return [i for i in items if i.get("senderThreadId")==sender and i.get("creationSource")=="mcp" and i.get("createdBy")=="agent"]
 
 def answered(items, incoming):
-    return bool(incoming) and any(i.get("type")=="assistant_message" and i.get("position",-1)>incoming[0].get("position",-1) for i in items)
+    return bool(incoming) and any(i.get("type")=="assistant_message" and i.get("status")=="completed" and i.get("position",-1)>incoming[0].get("position",-1) for i in items)
 
 ci=claude.get("items",[])
 xi=codex.get("items",[])
