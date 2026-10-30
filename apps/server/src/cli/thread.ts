@@ -1,5 +1,6 @@
 import {
   OrchestratorMcpFailure,
+  OrchestratorMcpCapabilitiesResult,
   OrchestratorMcpThreadListResult,
   OrchestratorMcpThreadReadResult,
   OrchestratorMcpThreadSendResult,
@@ -498,6 +499,37 @@ const decodeThreadId = (value: string) =>
     Effect.mapError(() => new ThreadUsageError({ detail: `'${value}' is not a thread id.` })),
   );
 
+const threadCapabilitiesCommand = Command.make("capabilities", {
+  ...projectLocationFlags,
+  json: jsonFlag,
+}).pipe(
+  Command.withDescription("Show available T3 providers, instance IDs and models on the running server."),
+  Command.withHandler((flags) =>
+    withThreadTools(
+      flags,
+      Effect.fn("cli.thread.capabilities")(function* (tools) {
+        const capabilities = yield* tools.call(
+          "orchestrator_capabilities",
+          {},
+          OrchestratorMcpCapabilitiesResult,
+        );
+        if (flags.json) return yield* printJson(capabilities);
+        for (const provider of capabilities.providers) {
+          yield* Console.log(
+            `${provider.providerInstanceId}  ${provider.driverKind}  ${provider.displayName ?? ""}`,
+          );
+          for (const model of provider.models) {
+            yield* Console.log(`  ${model.id}  ${model.label ?? ""}`);
+          }
+          for (const constraint of provider.constraints) {
+            yield* Console.log(`  NOTE ${constraint}`);
+          }
+        }
+      }),
+    ).pipe(reportThreadErrors),
+  ),
+);
+
 const threadListCommand = Command.make("list", {
   ...projectLocationFlags,
   project: Flag.String("project").pipe(
@@ -719,6 +751,7 @@ const threadShowCommand = Command.make("show", {
 export const threadCommand = Command.make("thread").pipe(
   Command.withDescription("Start, message, and read threads on the running server."),
   Command.withSubcommands([
+    threadCapabilitiesCommand,
     threadListCommand,
     threadStartCommand,
     threadSendCommand,
